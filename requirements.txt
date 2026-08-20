@@ -1,0 +1,38 @@
+# OneVoice AI — Plug-and-Play Speech-to-Speech Requirements
+# Install: pip install -r requirements.txt
+
+# ── Web server ───────────────────────────────────────────────────
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+websockets>=12.0
+psutil>=5.9.0
+
+# ── ASR Engines ──────────────────────────────────────────────────
+sherpa-onnx>=1.11.0
+
+# ── MT Engines (MarianMT, Transformers) ──────────────────────────
+transformers>=4.41.0
+sentencepiece>=0.2.0
+sacremoses>=0.1.1
+torch>=2.1.0
+
+# ── TTS Engines (Kokoro EN/ZH/VI) ────────────────────────────────
+kokoro-onnx>=0.4.0
+kokoro-vietnamese>=0.1.0
+vig2p>=0.1.2
+
+# ── Quantization & Optimization ──────────────────────────────────
+onnx>=1.16.0
+onnxruntime>=1.17.0
+optimum[onnxruntime]>=1.18.0
+
+# ── Qualcomm AI Hub Profiling ────────────────────────────────────
+qai-hub>=0.12.0
+
+# ── Audio I/O & Utils ────────────────────────────────────────────
+soundfile>=0.12.1
+numpy>=1.26.0
+scipy>=1.13.0
+huggingface_hub>=0.23.0
+requests>=2.32.0

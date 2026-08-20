@@ -1,0 +1,2108 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OneVoice AI — Speech-to-Speech Demo (VI → EN)</title>
+  <meta name="description" content="Demo dịch giọng nói Tiếng Việt sang Tiếng Anh sử dụng pipeline ASR → MT → TTS" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+
+  <style>
+    /* ═══════════════════════════════ TOKENS ═══════════════════════════════ */
+    :root {
+      --bg-base: #090b10;
+      --bg-card: #0d1117;
+      --bg-elevated: #161b22;
+      --bg-hover: #1c2333;
+      --border: #21262d;
+      --border-lit: #30363d;
+
+      --accent: #00d4ff;
+      --accent-dim: rgba(0, 212, 255, 0.12);
+      --accent-glow: rgba(0, 212, 255, 0.35);
+      --green: #3fb950;
+      --green-dim: rgba(63, 185, 80, 0.15);
+      --yellow: #f0b429;
+      --yellow-dim: rgba(240, 180, 41, 0.15);
+      --red: #f85149;
+      --red-dim: rgba(248, 81, 73, 0.15);
+      --purple: #a371f7;
+      --purple-dim: rgba(163, 113, 247, 0.15);
+      --orange: #ff9500;
+
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted: #484f58;
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, .4);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, .5);
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, .7);
+      --shadow-accent: 0 0 24px var(--accent-glow);
+    }
+
+    /* ═══════════════════════════════ RESET ════════════════════════════════ */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 16px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    button {
+      cursor: pointer;
+      font-family: inherit;
+      border: none;
+      outline: none;
+    }
+
+    input,
+    select {
+      font-family: inherit;
+    }
+
+    /* ═══════════════════════════════ BACKGROUND ═══════════════════════════ */
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0, 212, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 212, 255, 0.025) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+
+    .bg-orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .bg-orb-1 {
+      width: 500px;
+      height: 500px;
+      top: -150px;
+      left: -100px;
+      background: radial-gradient(circle, rgba(0, 212, 255, .08) 0%, transparent 70%);
+    }
+
+    .bg-orb-2 {
+      width: 400px;
+      height: 400px;
+      bottom: -100px;
+      right: -80px;
+      background: radial-gradient(circle, rgba(163, 113, 247, .08) 0%, transparent 70%);
+    }
+
+    /* ═══════════════════════════════ LAYOUT ═══════════════════════════════ */
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 20px 80px;
+    }
+
+    /* ═══════════════════════════════ HEADER ═══════════════════════════════ */
+    .header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(0, 212, 255, .2);
+      border-radius: 999px;
+      padding: 4px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .header-badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: .5;
+        transform: scale(.7);
+      }
+    }
+
+    .header h1 {
+      font-size: clamp(28px, 5vw, 48px);
+      font-weight: 800;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #fff 0%, var(--accent) 50%, var(--purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+
+    .header p {
+      font-size: 15px;
+      color: var(--text-secondary);
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* ═══════════════════════════════ MODEL STATUS ══════════════════════════ */
+    .status-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 36px;
+    }
+
+    .status-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all .3s;
+    }
+
+    .status-chip .chip-icon {
+      font-size: 14px;
+    }
+
+    .status-chip .chip-name {
+      color: var(--text-secondary);
+    }
+
+    .status-chip .chip-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: background .3s;
+    }
+
+    .status-chip.ready {
+      border-color: rgba(63, 185, 80, .3);
+    }
+
+    .status-chip.ready .chip-dot {
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+    }
+
+    .status-chip.loading .chip-dot {
+      background: var(--yellow);
+      animation: pulse-dot 1s ease-in-out infinite;
+    }
+
+    .status-chip.error .chip-dot {
+      background: var(--red);
+    }
+
+    /* ═══════════════════════════════ PIPELINE STAGES ══════════════════════ */
+    .pipeline {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      margin-bottom: 32px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+    }
+
+    .stage {
+      flex: 1;
+      padding: 20px 18px;
+      position: relative;
+      border-right: 1px solid var(--border);
+      transition: all .4s;
+    }
+
+    .stage:last-child {
+      border-right: none;
+    }
+
+    .stage-arrow {
+      position: absolute;
+      right: -14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 28px;
+      height: 28px;
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: var(--text-muted);
+      z-index: 2;
+      transition: all .4s;
+    }
+
+    .stage.active {
+      background: var(--bg-hover);
+    }
+
+    .stage.done {
+      background: rgba(63, 185, 80, .04);
+    }
+
+    .stage.active .stage-arrow,
+    .stage.done .stage-arrow {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .stage-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .stage-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      transition: all .4s;
+    }
+
+    .stage.active .stage-num,
+    .stage.done .stage-num {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+    }
+
+    .stage-name {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .stage.active .stage-name {
+      color: var(--accent);
+    }
+
+    .stage.done .stage-name {
+      color: var(--green);
+    }
+
+    .stage-model {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 8px;
+    }
+
+    .stage-output {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      min-height: 38px;
+      background: var(--bg-base);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      transition: all .3s;
+      word-break: break-word;
+    }
+
+    .stage-output.has-content {
+      color: var(--text-primary);
+      border-color: var(--border-lit);
+    }
+
+    .stage-latency {
+      margin-top: 6px;
+      font-size: 10px;
+      color: var(--accent);
+      font-family: 'JetBrains Mono', monospace;
+      min-height: 14px;
+    }
+
+    /* Spinner inside stage */
+    .stage-spinner {
+      display: none;
+      width: 16px;
+      height: 16px;
+      margin: 11px auto;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .stage.processing .stage-output {
+      display: none;
+    }
+
+    .stage.processing .stage-spinner {
+      display: block;
+    }
+
+    /* ═══════════════════════════════ INPUT CARD ════════════════════════════ */
+    .input-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    .input-tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-base);
+      border-radius: var(--radius-md);
+      padding: 4px;
+      margin-bottom: 24px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 9px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: transparent;
+      transition: all .25s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .tab-btn.active {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Mic panel */
+    .mic-panel {
+      display: none;
+    }
+
+    .mic-panel.visible {
+      display: block;
+    }
+
+    .mic-ring-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding: 12px 0 24px;
+    }
+
+    .mic-ring {
+      position: relative;
+      width: 110px;
+      height: 110px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mic-ring-outer {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      transition: all .4s;
+    }
+
+    .mic-ring-pulse {
+      position: absolute;
+      inset: -12px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      transition: all .4s;
+    }
+
+    .recording .mic-ring-outer {
+      border-color: var(--red);
+    }
+
+    .recording .mic-ring-pulse {
+      border-color: var(--red);
+      opacity: .4;
+      animation: ring-pulse 1.2s ease-out infinite;
+    }
+
+    @keyframes ring-pulse {
+      0% {
+        transform: scale(1);
+        opacity: .4;
+      }
+
+      100% {
+        transform: scale(1.5);
+        opacity: 0;
+      }
+    }
+
+    .mic-btn {
+      width: 86px;
+      height: 86px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1c2333 0%, #0d1117 100%);
+      border: 2px solid var(--border-lit);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      transition: all .3s;
+      position: relative;
+      z-index: 1;
+    }
+
+    .mic-btn:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 20px var(--accent-glow);
+      transform: scale(1.04);
+    }
+
+    .recording .mic-btn {
+      background: linear-gradient(135deg, var(--red) 0%, #c0392b 100%);
+      border-color: var(--red);
+      box-shadow: 0 0 30px rgba(248, 81, 73, .4);
+      animation: mic-beat 1s ease-in-out infinite;
+    }
+
+    @keyframes mic-beat {
+
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.05);
+      }
+    }
+
+    .mic-hint {
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    .mic-hint strong {
+      color: var(--text-primary);
+    }
+
+    /* Waveform */
+    .waveform-wrap {
+      height: 56px;
+      background: var(--bg-base);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    #waveform-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* VAD indicator */
+    .vad-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .vad-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .vad-bar-wrap {
+      flex: 1;
+      height: 6px;
+      background: var(--bg-elevated);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .vad-bar {
+      height: 100%;
+      width: 0;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--green) 0%, var(--accent) 100%);
+      transition: width .08s linear;
+    }
+
+    .vad-status {
+      font-size: 11px;
+      font-weight: 600;
+      width: 64px;
+      text-align: right;
+      color: var(--text-muted);
+    }
+
+    .vad-status.speaking {
+      color: var(--green);
+    }
+
+    /* Auto-stop timer */
+    .silence-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .silence-label {
+      flex-shrink: 0;
+    }
+
+    .silence-bar-wrap {
+      flex: 1;
+      height: 4px;
+      background: var(--bg-elevated);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .silence-bar {
+      height: 100%;
+      width: 0;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--yellow) 0%, var(--orange) 100%);
+      transition: width .1s linear;
+    }
+
+    .silence-val {
+      width: 36px;
+      text-align: right;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* File panel */
+    .file-panel {
+      display: none;
+    }
+
+    .file-panel.visible {
+      display: block;
+    }
+
+    .dropzone {
+      border: 2px dashed var(--border-lit);
+      border-radius: var(--radius-lg);
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .3s;
+      background: var(--bg-base);
+      margin-bottom: 16px;
+    }
+
+    .dropzone:hover,
+    .dropzone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .dropzone-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+
+    .dropzone-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .dropzone-sub {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    #file-input {
+      display: none;
+    }
+
+    .file-preview {
+      display: none;
+      background: var(--bg-elevated);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      flex-direction: row;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .file-preview.visible {
+      display: flex;
+    }
+
+    .file-icon {
+      font-size: 24px;
+    }
+
+    .file-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .file-name {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-size {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .file-remove {
+      font-size: 18px;
+      color: var(--text-muted);
+      background: none;
+      padding: 4px;
+      border-radius: 4px;
+    }
+
+    .file-remove:hover {
+      color: var(--red);
+      background: var(--red-dim);
+    }
+
+    /* Run button */
+    .run-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: var(--radius-lg);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: .02em;
+      background: linear-gradient(135deg, var(--accent) 0%, #0099bb 100%);
+      color: #000;
+      transition: all .3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .run-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px var(--accent-glow);
+    }
+
+    .run-btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .run-btn:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    /* ═══════════════════════════════ OUTPUT CARD ═══════════════════════════ */
+    .output-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 28px;
+      transition: all .4s;
+      display: none;
+    }
+
+    .output-card.visible {
+      display: block;
+    }
+
+    .output-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .output-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .total-badge {
+      margin-left: auto;
+      background: var(--accent-dim);
+      border: 1px solid rgba(0, 212, 255, .25);
+      border-radius: 999px;
+      padding: 3px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Text results */
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 600px) {
+      .result-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .result-box {
+      background: var(--bg-elevated);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .result-box-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .result-box-header .badge {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-radius: 4px;
+      padding: 1px 7px;
+      font-size: 10px;
+    }
+
+    .result-box-body {
+      padding: 12px 14px;
+      font-size: 14px;
+      line-height: 1.65;
+      color: var(--text-primary);
+      min-height: 56px;
+    }
+
+    .result-box.vi .result-box-header {
+      color: var(--yellow);
+    }
+
+    .result-box.en .result-box-header {
+      color: var(--green);
+    }
+
+    .result-box.vi .badge {
+      background: var(--yellow-dim);
+      color: var(--yellow);
+    }
+
+    .result-box.en .badge {
+      background: var(--green-dim);
+      color: var(--green);
+    }
+
+    /* Audio player */
+    .audio-section {}
+
+    .audio-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 10px;
+    }
+
+    .audio-player-wrap {
+      background: var(--bg-elevated);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      padding: 16px;
+    }
+
+    #output-audio {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .audio-meta {
+      display: flex;
+      gap: 16px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .audio-meta-item {
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .audio-meta-item span {
+      color: var(--accent);
+    }
+
+    /* ═══════════════════════════════ TOAST ════════════════════════════════ */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      font-size: 13px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: auto;
+      min-width: 260px;
+      max-width: 360px;
+      animation: toast-in .3s ease-out;
+    }
+
+    @keyframes toast-in {
+      from {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+    }
+
+    .toast.error {
+      border-color: rgba(248, 81, 73, .4);
+    }
+
+    .toast.success {
+      border-color: rgba(63, 185, 80, .4);
+    }
+
+    .toast.info {
+      border-color: rgba(0, 212, 255, .3);
+    }
+
+    /* ═══════════════════════════════ SCROLLBAR ═════════════════════════════ */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-base);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-lit);
+      border-radius: 3px;
+    }
+
+    /* ═══════════════════════════════ LANGUAGE SELECTOR ════════════════════ */
+    .lang-selector-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .lang-selector-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .lang-btns {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      flex: 1;
+    }
+
+    .lang-btn {
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 600;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      transition: all .25s;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .lang-btn:hover {
+      border-color: var(--accent);
+      color: var(--text-primary);
+    }
+
+    .lang-btn.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .lang-btn.switching {
+      opacity: .6;
+      pointer-events: none;
+      animation: pulse-dot 1s ease-in-out infinite;
+    }
+
+    .switching-badge {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--yellow);
+      margin-left: auto;
+    }
+
+    .switching-badge.visible {
+      display: flex;
+    }
+
+    .switching-spinner {
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--border);
+      border-top-color: var(--yellow);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
+    /* ═══════════════════════════════ METRICS WIDGET ═══════════════════════ */
+    .metrics-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: none;
+    }
+
+    .metrics-card.visible {
+      display: block;
+    }
+
+    .metrics-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+    }
+
+    .metric-box {
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      text-align: center;
+    }
+
+    .metric-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 4px;
+    }
+
+    .metric-value {
+      font-size: 20px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent);
+    }
+
+    .metric-value.green {
+      color: var(--green);
+    }
+
+    .metric-value.yellow {
+      color: var(--yellow);
+    }
+
+    .metric-unit {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Background -->
+  <div class="bg-grid"></div>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <!-- Toasts -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <div class="container">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header-badge">
+        <span class="dot"></span>
+        OneVoice AI Demo
+      </div>
+      <h1 id="header-title">Speech-to-Speech<br />Tiếng Việt → English</h1>
+      <p>Pipeline 3 giai đoạn: Nhận dạng giọng nói → Dịch máy → Tổng hợp giọng nói</p>
+    </header>
+
+    <!-- Language Selector -->
+    <div class="lang-selector-card">
+      <span class="lang-selector-label">🌍 Luồng dịch</span>
+      <div class="lang-btns" id="lang-btns">
+        <button class="lang-btn active" id="btn-vi-en" onclick="switchPipeline('vi-en')" title="Tiếng Việt → Tiếng Anh">
+          🇻🇳 → 🇬🇧 VI-EN
+        </button>
+        <button class="lang-btn" id="btn-en-vi" onclick="switchPipeline('en-vi')" title="Tiếng Anh → Tiếng Việt">
+          🇬🇧 → 🇻🇳 EN-VI
+        </button>
+        <button class="lang-btn" id="btn-vi-zh" onclick="switchPipeline('vi-zh')" title="Tiếng Việt → Tiếng Trung">
+          🇻🇳 → 🇨🇳 VI-ZH
+        </button>
+        <button class="lang-btn" id="btn-zh-vi" onclick="switchPipeline('zh-vi')" title="Tiếng Trung → Tiếng Việt">
+          🇨🇳 → 🇻🇳 ZH-VI
+        </button>
+      </div>
+      <div class="switching-badge" id="switching-badge">
+        <div class="switching-spinner"></div>
+        <span id="switching-label">Đang tải...</span>
+      </div>
+    </div>
+
+    <!-- Model Status Bar -->
+    <div class="status-bar" id="status-bar">
+      <div class="status-chip" id="chip-asr">
+        <span class="chip-dot"></span>
+        <span class="chip-icon">🎙</span>
+        <span class="chip-name">ASR</span>
+        <span id="chip-asr-model"
+          style="font-size:10px; color:var(--text-muted); font-family:'JetBrains Mono'">Zipformer VI 30M</span>
+      </div>
+      <div class="status-chip" id="chip-mt">
+        <span class="chip-dot"></span>
+        <span class="chip-icon">🌐</span>
+        <span class="chip-name">MT</span>
+        <span id="chip-mt-model" style="font-size:10px; color:var(--text-muted); font-family:'JetBrains Mono'">OPUS-MT
+          vi-en</span>
+      </div>
+      <div class="status-chip" id="chip-tts">
+        <span class="chip-dot"></span>
+        <span class="chip-icon">🔊</span>
+        <span class="chip-name">TTS</span>
+        <span id="chip-tts-model"
+          style="font-size:10px; color:var(--text-muted); font-family:'JetBrains Mono'">Kokoro-82M EN</span>
+      </div>
+      <div class="status-chip" id="chip-ram">
+        <span class="chip-dot" style="background:var(--purple)"></span>
+        <span class="chip-icon">💾</span>
+        <span class="chip-name">RAM</span>
+        <span id="chip-ram-val" style="font-size:10px; color:var(--text-muted); font-family:'JetBrains Mono'">—
+          MB</span>
+      </div>
+    </div>
+
+    <!-- Pipeline Visualization -->
+    <div class="pipeline" id="pipeline">
+      <div class="stage" id="stage-asr">
+        <div class="stage-header">
+          <div class="stage-num">1</div>
+          <div class="stage-name">ASR</div>
+        </div>
+        <div class="stage-model">Zipformer VI 30M int8</div>
+        <div class="stage-spinner"></div>
+        <div class="stage-output" id="asr-output">Văn bản nhận diện...</div>
+        <div class="stage-latency" id="asr-latency"></div>
+        <div class="stage-arrow">→</div>
+      </div>
+      <div class="stage" id="stage-mt">
+        <div class="stage-header">
+          <div class="stage-num">2</div>
+          <div class="stage-name">MT</div>
+        </div>
+        <div class="stage-model">OPUS-MT vi-en</div>
+        <div class="stage-spinner"></div>
+        <div class="stage-output" id="mt-output">Bản dịch tiếng Anh...</div>
+        <div class="stage-latency" id="mt-latency"></div>
+        <div class="stage-arrow">→</div>
+      </div>
+      <div class="stage" id="stage-tts">
+        <div class="stage-header">
+          <div class="stage-num">3</div>
+          <div class="stage-name">TTS</div>
+        </div>
+        <div class="stage-model">Kokoro-82M ONNX</div>
+        <div class="stage-spinner"></div>
+        <div class="stage-output" id="tts-output">Giọng đọc tiếng Anh...</div>
+        <div class="stage-latency" id="tts-latency"></div>
+      </div>
+    </div>
+
+    <!-- Metrics Widget -->
+    <div class="metrics-card" id="metrics-card">
+      <div class="metrics-title">⚡ Performance Metrics <span
+          style="color:var(--text-muted);font-weight:400;font-size:10px">(rolling avg)</span></div>
+      <div class="metrics-grid">
+        <div class="metric-box">
+          <div class="metric-label">ASR</div>
+          <div class="metric-value" id="m-asr">—</div>
+          <div class="metric-unit">ms</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">MT</div>
+          <div class="metric-value" id="m-mt">—</div>
+          <div class="metric-unit">ms</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">TTS</div>
+          <div class="metric-value" id="m-tts">—</div>
+          <div class="metric-unit">ms</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">Total</div>
+          <div class="metric-value green" id="m-total">—</div>
+          <div class="metric-unit">ms</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">RAM</div>
+          <div class="metric-value yellow" id="m-ram">—</div>
+          <div class="metric-unit">MB</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Card -->
+    <div class="input-card">
+      <!-- Tabs -->
+      <div class="input-tabs">
+        <button class="tab-btn active" id="tab-mic" onclick="switchTab('mic')">
+          🎤 Ghi âm trực tiếp
+        </button>
+        <button class="tab-btn" id="tab-file" onclick="switchTab('file')">
+          📁 Upload file audio
+        </button>
+      </div>
+
+      <!-- Mic Panel -->
+      <div class="mic-panel visible" id="mic-panel">
+        <div class="waveform-wrap">
+          <canvas id="waveform-canvas"></canvas>
+        </div>
+
+        <div class="vad-row">
+          <span class="vad-label">Âm lượng</span>
+          <div class="vad-bar-wrap">
+            <div class="vad-bar" id="vad-bar"></div>
+          </div>
+          <span class="vad-status" id="vad-status">Chờ...</span>
+        </div>
+
+        <div class="silence-row">
+          <span class="silence-label">Im lặng</span>
+          <div class="silence-bar-wrap">
+            <div class="silence-bar" id="silence-bar"></div>
+          </div>
+          <span class="silence-val" id="silence-val">—</span>
+        </div>
+
+        <div class="mic-ring-wrap">
+          <div class="mic-ring" id="mic-ring">
+            <div class="mic-ring-outer"></div>
+            <div class="mic-ring-pulse"></div>
+            <button class="mic-btn" id="mic-btn" onclick="toggleMic()" title="Nhấn để ghi âm">
+              <span id="mic-icon">🎤</span>
+            </button>
+          </div>
+          <div class="mic-hint" id="mic-hint">
+            <strong>Nhấn để bắt đầu ghi âm</strong><br />
+            Nói tiếng Việt — tự động dừng sau 1.5s im lặng
+          </div>
+        </div>
+      </div>
+
+      <!-- File Panel -->
+      <div class="file-panel" id="file-panel">
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+          <div class="dropzone-icon">🎵</div>
+          <div class="dropzone-title">Kéo thả file audio vào đây</div>
+          <div class="dropzone-sub">hoặc nhấn để chọn file · WAV, MP3, OGG, FLAC, M4A</div>
+        </div>
+        <input type="file" id="file-input" accept="audio/*" onchange="handleFileSelect(this.files[0])" />
+
+        <div class="file-preview" id="file-preview">
+          <span class="file-icon">🎵</span>
+          <div class="file-info">
+            <div class="file-name" id="file-name">—</div>
+            <div class="file-size" id="file-size">—</div>
+          </div>
+          <button class="file-remove" onclick="clearFile()" title="Xóa">✕</button>
+        </div>
+
+        <button class="run-btn" id="run-file-btn" onclick="runFileMode()" disabled>
+          ▶ Dịch file này
+        </button>
+      </div>
+    </div>
+
+    <!-- Output Card -->
+    <div class="output-card" id="output-card">
+      <div class="output-header">
+        <span style="font-size:18px">✅</span>
+        <span class="output-title">Kết quả dịch</span>
+        <div class="total-badge" id="total-badge">—</div>
+      </div>
+
+      <div class="result-grid">
+        <div class="result-box vi">
+          <div class="result-box-header">
+            🇻🇳 Tiếng Việt (ASR)
+            <span class="badge" id="asr-badge">—</span>
+          </div>
+          <div class="result-box-body" id="result-vi">—</div>
+        </div>
+        <div class="result-box en">
+          <div class="result-box-header">
+            🇺🇸 English (MT + TTS)
+            <span class="badge" id="en-badge">—</span>
+          </div>
+          <div class="result-box-body" id="result-en">—</div>
+        </div>
+      </div>
+
+      <div class="audio-section">
+        <div class="audio-title">🔊 Audio output (English)</div>
+        <div class="audio-player-wrap">
+          <audio id="output-audio" controls style="width:100%; accent-color:var(--accent)"></audio>
+          <div class="audio-meta">
+            <div class="audio-meta-item">Thời lượng: <span id="meta-dur">—</span></div>
+            <div class="audio-meta-item">TTS: <span id="meta-tts">—</span></div>
+            <div class="audio-meta-item">Sample rate: <span id="meta-sr">24 kHz</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /container -->
+
+  <script>
+    /* ═══════════════════════════════════════════════════════════════════════════
+       STATE
+    ═══════════════════════════════════════════════════════════════════════════ */
+    const state = {
+      activeTab: 'mic',
+      activeDirection: 'vi-en',
+      modelStatus: { asr: 'unloaded', mt: 'unloaded', tts: 'unloaded' },
+      isSwitching: false,
+
+      // Mic
+      micStream: null,
+      audioCtx: null,
+      analyser: null,
+      micProcessor: null,
+      recording: false,
+      recordedChunks: [],       // Float32Array chunks at 16kHz
+
+      // VAD
+      vadThreshold: 0.012,      // RMS threshold for "speaking"
+      silenceDuration: 0,       // seconds of continuous silence
+      silenceLimit: 1,        // auto-stop after N seconds silence
+      hadSpeech: false,         // whether any speech was detected
+
+      // File
+      selectedFile: null,
+      running: false,
+
+      // WebSocket
+      ws: null,
+    };
+
+    const PIPELINE_META = {
+      'vi-en': {
+        title: 'Speech-to-Speech<br/>Tiếng Việt → English',
+        srcLabel: '🇻🇳 Tiếng Việt (ASR)',
+        tgtLabel: '🇬🇧 English (MT + TTS)',
+        audioTitle: '🔊 Audio output (English)',
+        asrModel: 'Zipformer VI 30M int8',
+        mtModel: 'OPUS-MT vi-en',
+        ttsModel: 'Kokoro-82M EN',
+        speakHint: 'Nói tiếng Việt — tự động dừng sau 1.5s im lặng',
+      },
+      'en-vi': {
+        title: 'Speech-to-Speech<br/>English → Tiếng Việt',
+        srcLabel: '🇬🇧 English (ASR)',
+        tgtLabel: '🇻🇳 Tiếng Việt (MT + TTS)',
+        audioTitle: '🔊 Audio output (Tiếng Việt)',
+        asrModel: 'Moonshine Base INT8',
+        mtModel: 'OPUS-MT en-vi',
+        ttsModel: 'Kokoro VI',
+        speakHint: 'Speak in English — auto-stops after 1.5s silence',
+      },
+      'vi-zh': {
+        title: 'Speech-to-Speech<br/>Tiếng Việt → 中文',
+        srcLabel: '🇻🇳 Tiếng Việt (ASR)',
+        tgtLabel: '🇨🇳 中文 (MT + TTS)',
+        audioTitle: '🔊 Audio output (中文)',
+        asrModel: 'Zipformer VI 30M int8',
+        mtModel: 'OPUS-MT vi-zh',
+        ttsModel: 'Kokoro ZH',
+        speakHint: 'Nói tiếng Việt — tự động dừng sau 1.5s im lặng',
+      },
+      'zh-vi': {
+        title: 'Speech-to-Speech<br/>中文 → Tiếng Việt',
+        srcLabel: '🇨🇳 中文 (ASR)',
+        tgtLabel: '🇻🇳 Tiếng Việt (MT + TTS)',
+        audioTitle: '🔊 Audio output (Tiếng Việt)',
+        asrModel: 'Paraformer ZH INT8',
+        mtModel: 'OPUS-MT zh-vi',
+        ttsModel: 'Kokoro VI',
+        speakHint: '请讲中文 — 静音1.5秒后自动停止',
+      },
+    };
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       STATUS & METRICS POLLING
+    ═══════════════════════════════════════════════════════════════════════════ */
+    function updateStatusChip(id, status) {
+      const chip = document.getElementById(`chip-${id}`);
+      if (chip) chip.className = `status-chip ${status}`;
+    }
+
+    function updatePipelineUI(direction) {
+      state.activeDirection = direction;
+      const meta = PIPELINE_META[direction] || PIPELINE_META['vi-en'];
+
+      // Header & labels
+      const hTitle = document.getElementById('header-title');
+      if (hTitle) hTitle.innerHTML = meta.title;
+
+      document.getElementById('chip-asr-model').textContent = meta.asrModel;
+      document.getElementById('chip-mt-model').textContent = meta.mtModel;
+      document.getElementById('chip-tts-model').textContent = meta.ttsModel;
+
+      const stAsr = document.querySelector('#stage-asr .stage-model');
+      if (stAsr) stAsr.textContent = meta.asrModel;
+      const stMt = document.querySelector('#stage-mt .stage-model');
+      if (stMt) stMt.textContent = meta.mtModel;
+      const stTts = document.querySelector('#stage-tts .stage-model');
+      if (stTts) stTts.textContent = meta.ttsModel;
+
+      const resViHeader = document.querySelector('.result-box.vi .result-box-header');
+      if (resViHeader) resViHeader.childNodes[0].textContent = meta.srcLabel + ' ';
+      const resEnHeader = document.querySelector('.result-box.en .result-box-header');
+      if (resEnHeader) resEnHeader.childNodes[0].textContent = meta.tgtLabel + ' ';
+
+      const audTitle = document.querySelector('.audio-title');
+      if (audTitle) audTitle.textContent = meta.audioTitle;
+
+      const hint = document.getElementById('mic-hint');
+      if (hint && !state.recording) {
+        hint.innerHTML = `<strong>Nhấn để bắt đầu ghi âm</strong><br/>${meta.speakHint}`;
+      }
+
+      // Active buttons
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.id === `btn-${direction}`);
+      });
+    }
+
+    async function pollStatus() {
+      try {
+        const r = await fetch('/api/status');
+        const d = await r.json();
+        if (d.active_direction && d.active_direction !== state.activeDirection && !state.isSwitching) {
+          updatePipelineUI(d.active_direction);
+        }
+        if (d.models) {
+          state.modelStatus = {
+            asr: d.models.asr.status,
+            mt: d.models.mt.status,
+            tts: d.models.tts.status,
+          };
+          updateStatusChip('asr', d.models.asr.status);
+          updateStatusChip('mt', d.models.mt.status);
+          updateStatusChip('tts', d.models.tts.status);
+        }
+        if (d.ram_mb !== undefined) {
+          const ramVal = document.getElementById('chip-ram-val');
+          if (ramVal) ramVal.textContent = `${d.ram_mb} MB`;
+        }
+      } catch (e) { }
+    }
+
+    async function pollMetrics() {
+      try {
+        const r = await fetch('/api/metrics');
+        const d = await r.json();
+        if (d.count > 0) {
+          document.getElementById('metrics-card').classList.add('visible');
+          document.getElementById('m-asr').textContent = Math.round(d.avg_asr_ms);
+          document.getElementById('m-mt').textContent = Math.round(d.avg_mt_ms);
+          document.getElementById('m-tts').textContent = Math.round(d.avg_tts_ms);
+          document.getElementById('m-total').textContent = Math.round(d.avg_total_ms);
+          document.getElementById('m-ram').textContent = Math.round(d.ram_mb);
+        }
+      } catch (e) { }
+    }
+
+    // Start polling
+    (function startPolling() {
+      pollStatus();
+      pollMetrics();
+      setInterval(() => {
+        pollStatus();
+        pollMetrics();
+      }, 2500);
+    })();
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       PIPELINE SWITCHING
+    ═══════════════════════════════════════════════════════════════════════════ */
+    async function switchPipeline(direction) {
+      if (state.isSwitching || direction === state.activeDirection) return;
+
+      state.isSwitching = true;
+      const badge = document.getElementById('switching-badge');
+      const label = document.getElementById('switching-label');
+      badge.classList.add('visible');
+      label.textContent = `Đang chuyển sang ${direction.toUpperCase()}...`;
+
+      document.querySelectorAll('.lang-btn').forEach(b => b.classList.add('switching'));
+      toast(`Đang nạp mô hình cho luồng [${direction.toUpperCase()}]...`, 'info');
+
+      try {
+        const r = await fetch('/api/pipeline/select', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ direction }),
+        });
+        const d = await r.json();
+
+        updatePipelineUI(direction);
+        resetPipeline();
+
+        // Poll until ready
+        let attempts = 0;
+        const pollInterval = setInterval(async () => {
+          attempts++;
+          await pollStatus();
+          const allReady = Object.values(state.modelStatus).every(s => s === 'ready');
+          if (allReady || attempts > 60) {
+            clearInterval(pollInterval);
+            state.isSwitching = false;
+            badge.classList.remove('visible');
+            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('switching'));
+            if (allReady) {
+              toast(`Đã sẵn sàng luồng [${direction.toUpperCase()}]!`, 'success');
+            } else {
+              toast(`Quá thời gian tải model [${direction.toUpperCase()}]`, 'error');
+            }
+          }
+        }, 1000);
+
+      } catch (e) {
+        toast(`Lỗi khi chuyển luồng: ${e.message}`, 'error');
+        state.isSwitching = false;
+        badge.classList.remove('visible');
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('switching'));
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       TAB SWITCHING
+    ═══════════════════════════════════════════════════════════════════════════ */
+    function switchTab(tab) {
+      state.activeTab = tab;
+      document.getElementById('tab-mic').classList.toggle('active', tab === 'mic');
+      document.getElementById('tab-file').classList.toggle('active', tab === 'file');
+      document.getElementById('mic-panel').classList.toggle('visible', tab === 'mic');
+      document.getElementById('file-panel').classList.toggle('visible', tab === 'file');
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       PIPELINE UI HELPERS
+    ═══════════════════════════════════════════════════════════════════════════ */
+    function resetPipeline() {
+      ['asr', 'mt', 'tts'].forEach(s => {
+        const el = document.getElementById(`stage-${s}`);
+        if (el) el.className = 'stage';
+        const out = document.getElementById(`${s}-output`);
+        if (out) {
+          out.className = 'stage-output';
+          out.textContent = s === 'asr' ? 'Văn bản nhận diện...' :
+            s === 'mt' ? 'Bản dịch...' : 'Giọng đọc tổng hợp...';
+        }
+        const lat = document.getElementById(`${s}-latency`);
+        if (lat) lat.textContent = '';
+      });
+      document.getElementById('output-card').classList.remove('visible');
+    }
+
+    function stageProcessing(id) {
+      const el = document.getElementById(`stage-${id}`);
+      if (el) el.className = 'stage active processing';
+    }
+
+    function stageDone(id, text, latencyMs) {
+      const el = document.getElementById(`stage-${id}`);
+      if (el) el.className = 'stage done';
+      const out = document.getElementById(`${id}-output`);
+      if (out) {
+        out.className = 'stage-output has-content';
+        out.textContent = text || '—';
+      }
+      const lat = document.getElementById(`${id}-latency`);
+      if (lat) lat.textContent = latencyMs ? `${latencyMs} ms` : '';
+    }
+
+    function stageError(id, msg) {
+      const el = document.getElementById(`stage-${id}`);
+      if (el) el.className = 'stage';
+      const out = document.getElementById(`${id}-output`);
+      if (out) {
+        out.className = 'stage-output';
+        out.style.color = 'var(--red)';
+        out.textContent = msg;
+      }
+    }
+
+    function showOutput(srcText, tgtText, asrMs, mtMs, ttsMs, totalMs, audiob64, durSec, sr) {
+      document.getElementById('result-vi').textContent = srcText;
+      document.getElementById('result-en').textContent = tgtText;
+      document.getElementById('asr-badge').textContent = `${asrMs} ms`;
+      document.getElementById('en-badge').textContent = `${mtMs} ms`;
+      document.getElementById('total-badge').textContent = `Total: ${Math.round(totalMs)} ms`;
+      document.getElementById('meta-dur').textContent = `${durSec}s`;
+      document.getElementById('meta-tts').textContent = `${ttsMs} ms`;
+      document.getElementById('meta-sr').textContent = `${sr ? Math.round(sr / 1000) : 24} kHz`;
+
+      // Play audio
+      const blob = b64toBlob(audiob64, 'audio/wav');
+      const url = URL.createObjectURL(blob);
+      const audio = document.getElementById('output-audio');
+      audio.src = url;
+      audio.play().catch(() => { });
+
+      document.getElementById('output-card').classList.add('visible');
+      document.getElementById('output-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      pollMetrics();
+    }
+
+    function b64toBlob(b64, mime) {
+      const bytes = atob(b64);
+      const arr = new Uint8Array(bytes.length);
+      for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+      return new Blob([arr], { type: mime });
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       FULL PIPELINE (file upload via REST)
+    ═══════════════════════════════════════════════════════════════════════════ */
+    async function runPipeline(file) {
+      if (state.running) return;
+      const allReady = Object.values(state.modelStatus).every(s => s === 'ready');
+      if (!allReady) { toast('Chờ pipeline tải xong các model!', 'error'); return; }
+
+      state.running = true;
+      resetPipeline();
+      stageProcessing('asr');
+
+      const form = new FormData();
+      form.append('file', file);
+
+      try {
+        const res = await fetch('/api/pipeline', { method: 'POST', body: form });
+
+        if (!res.ok) {
+          const err = await res.json();
+          toast(err.detail || 'Pipeline error', 'error');
+          stageError('asr', 'Lỗi pipeline');
+          state.running = false;
+          return;
+        }
+
+        const d = await res.json();
+        const { stages } = d;
+
+        // Animate stages one by one
+        stageDone('asr', stages.asr.text, stages.asr.latency_ms);
+        await delay(100);
+        stageProcessing('mt');
+        await delay(80);
+        stageDone('mt', stages.mt.text, stages.mt.latency_ms);
+        await delay(100);
+        stageProcessing('tts');
+        await delay(80);
+        stageDone('tts', `${stages.tts.duration_sec}s audio`, stages.tts.latency_ms);
+        await delay(80);
+
+        showOutput(
+          stages.asr.text,
+          stages.mt.text,
+          stages.asr.latency_ms,
+          stages.mt.latency_ms,
+          stages.tts.latency_ms,
+          d.total_latency_ms,
+          d.audio_b64,
+          stages.tts.duration_sec,
+          stages.tts.sample_rate,
+        );
+
+      } catch (e) {
+        toast('Lỗi kết nối server: ' + e.message, 'error');
+        stageError('asr', 'Lỗi');
+      } finally {
+        state.running = false;
+      }
+    }
+
+    const delay = ms => new Promise(r => setTimeout(r, ms));
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       FILE MODE
+    ═══════════════════════════════════════════════════════════════════════════ */
+    function handleFileSelect(file) {
+      if (!file) return;
+      state.selectedFile = file;
+      document.getElementById('file-name').textContent = file.name;
+      document.getElementById('file-size').textContent = formatBytes(file.size);
+      document.getElementById('file-preview').classList.add('visible');
+      document.getElementById('run-file-btn').disabled = false;
+      document.getElementById('dropzone').style.display = 'none';
+    }
+
+    function clearFile() {
+      state.selectedFile = null;
+      document.getElementById('file-input').value = '';
+      document.getElementById('file-preview').classList.remove('visible');
+      document.getElementById('run-file-btn').disabled = true;
+      document.getElementById('dropzone').style.display = '';
+    }
+
+    function runFileMode() {
+      if (state.selectedFile) runPipeline(state.selectedFile);
+    }
+
+    // Drag & drop
+    const dz = document.getElementById('dropzone');
+    if (dz) {
+      dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+      dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+      dz.addEventListener('drop', e => {
+        e.preventDefault(); dz.classList.remove('drag-over');
+        const f = e.dataTransfer.files[0];
+        if (f && f.type.startsWith('audio/')) handleFileSelect(f);
+        else toast('Vui lòng chọn file audio', 'error');
+      });
+    }
+
+    function formatBytes(b) {
+      if (b < 1024) return `${b} B`;
+      if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+      return `${(b / 1024 / 1024).toFixed(1)} MB`;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       MIC MODE — WebSocket + VAD
+    ═══════════════════════════════════════════════════════════════════════════ */
+    let waveAnimId = null;
+
+    async function toggleMic() {
+      if (state.recording) {
+        stopRecording();
+      } else {
+        await startRecording();
+      }
+    }
+
+    async function startRecording() {
+      const notReady = Object.entries(state.modelStatus).filter(([k, v]) => v !== 'ready');
+      if (notReady.length > 0) {
+        const names = notReady.map(([k, v]) => `${k.toUpperCase()} (${v})`).join(', ');
+        toast(`Pipeline chưa sẵn sàng: ${names}. Vui lòng chờ vài giây!`, 'error');
+        return;
+      }
+
+      try {
+        state.micStream = await navigator.mediaDevices.getUserMedia({
+          audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true }
+        });
+      } catch (e) {
+        toast('Không thể truy cập microphone: ' + e.message, 'error');
+        return;
+      }
+
+      // AudioContext at 16kHz
+      state.audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+      const src = state.audioCtx.createMediaStreamSource(state.micStream);
+      state.analyser = state.audioCtx.createAnalyser();
+      state.analyser.fftSize = 512;
+      src.connect(state.analyser);
+
+      // ScriptProcessor to capture PCM
+      const bufSize = 4096;
+      const proc = state.audioCtx.createScriptProcessor(bufSize, 1, 1);
+      state.micProcessor = proc;
+      state.recordedChunks = [];
+      state.hadSpeech = false;
+      state.silenceDuration = 0;
+
+      proc.onaudioprocess = (e) => {
+        if (!state.recording) return;
+        const ch = e.inputBuffer.getChannelData(0);
+        const copy = new Float32Array(ch);
+        state.recordedChunks.push(copy);
+
+        // RMS for VAD
+        let rms = 0;
+        for (let i = 0; i < ch.length; i++) rms += ch[i] * ch[i];
+        rms = Math.sqrt(rms / ch.length);
+
+        // Update UI
+        const pct = Math.min(rms / 0.25, 1);
+        document.getElementById('vad-bar').style.width = (pct * 100) + '%';
+        const speaking = rms > state.vadThreshold;
+        const vs = document.getElementById('vad-status');
+        vs.textContent = speaking ? '🗣 Đang nói' : 'Im lặng';
+        vs.className = 'vad-status' + (speaking ? ' speaking' : '');
+
+        // Silence accumulation for auto-stop
+        const chunkSec = ch.length / 16000;
+        if (speaking) {
+          state.hadSpeech = true;
+          state.silenceDuration = 0;
+        } else if (state.hadSpeech) {
+          state.silenceDuration += chunkSec;
+        }
+
+        const silPct = state.silenceDuration / state.silenceLimit;
+        document.getElementById('silence-bar').style.width = Math.min(silPct * 100, 100) + '%';
+        document.getElementById('silence-val').textContent =
+          state.hadSpeech ? state.silenceDuration.toFixed(1) + 's' : '—';
+
+        if (state.hadSpeech && state.silenceDuration >= state.silenceLimit) {
+          stopRecording(true);
+        }
+      };
+
+      src.connect(proc);
+      proc.connect(state.audioCtx.destination);
+
+      state.recording = true;
+      updateMicUI(true);
+      startWaveform();
+      connectWebSocket();
+      resetPipeline();
+
+      const meta = PIPELINE_META[state.activeDirection] || PIPELINE_META['vi-en'];
+      toast(`Đang ghi âm... ${meta.speakHint}`, 'info');
+    }
+
+    function stopRecording(autoProcess = false) {
+      if (!state.recording) return;
+      state.recording = false;
+      updateMicUI(false);
+      stopWaveform();
+
+      // Cleanup audio
+      if (state.micProcessor) { state.micProcessor.disconnect(); state.micProcessor = null; }
+      if (state.analyser) { state.analyser.disconnect(); state.analyser = null; }
+      if (state.audioCtx) { state.audioCtx.close(); state.audioCtx = null; }
+      if (state.micStream) {
+        state.micStream.getTracks().forEach(t => t.stop());
+        state.micStream = null;
+      }
+
+      // Reset VAD UI
+      document.getElementById('vad-bar').style.width = '0';
+      document.getElementById('vad-status').textContent = 'Chờ...';
+      document.getElementById('vad-status').className = 'vad-status';
+      document.getElementById('silence-bar').style.width = '0';
+      document.getElementById('silence-val').textContent = '—';
+
+      if (state.hadSpeech && state.recordedChunks.length > 0 && state.ws) {
+        processMicAudio();
+      } else if (!state.hadSpeech) {
+        toast('Không phát hiện giọng nói — thử nói to hơn', 'error');
+      }
+    }
+
+    function updateMicUI(recording) {
+      const ring = document.getElementById('mic-ring');
+      const icon = document.getElementById('mic-icon');
+      const hint = document.getElementById('mic-hint');
+      const meta = PIPELINE_META[state.activeDirection] || PIPELINE_META['vi-en'];
+
+      if (ring) ring.className = recording ? 'mic-ring recording' : 'mic-ring';
+      if (icon) icon.textContent = recording ? '⏹' : '🎤';
+      if (hint) {
+        hint.innerHTML = recording
+          ? '<strong>Đang ghi âm...</strong><br/>Nhấn để dừng sớm'
+          : `<strong>Nhấn để bắt đầu ghi âm</strong><br/>${meta.speakHint}`;
+      }
+    }
+
+    function processMicAudio() {
+      if (!state.ws || state.ws.readyState !== WebSocket.OPEN) return;
+
+      const totalLen = state.recordedChunks.reduce((s, c) => s + c.length, 0);
+      const merged = new Float32Array(totalLen);
+      let offset = 0;
+      for (const c of state.recordedChunks) {
+        merged.set(c, offset);
+        offset += c.length;
+      }
+
+      log(`Sending ${(totalLen / 16000).toFixed(2)}s audio via WebSocket [${state.activeDirection}]`);
+      state.ws.send(merged.buffer);
+      state.ws.send(JSON.stringify({ type: 'stop' }));
+
+      stageProcessing('asr');
+    }
+
+    /* ─── WebSocket ──────────────────────────────────────────────────────────── */
+    function connectWebSocket() {
+      if (state.ws && state.ws.readyState === WebSocket.OPEN) return;
+
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      state.ws = new WebSocket(`${proto}://${location.host}/ws/pipeline`);
+
+      state.ws.onopen = () => log('WS connected');
+      state.ws.onerror = e => { log('WS error', e); toast('WebSocket error', 'error'); };
+      state.ws.onclose = () => { log('WS closed'); state.ws = null; };
+
+      state.ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+
+        if (msg.type === 'status') {
+          if (msg.models) {
+            state.modelStatus = {
+              asr: msg.models.asr.status,
+              mt: msg.models.mt.status,
+              tts: msg.models.tts.status,
+            };
+            updateStatusChip('asr', msg.models.asr.status);
+            updateStatusChip('mt', msg.models.mt.status);
+            updateStatusChip('tts', msg.models.tts.status);
+          }
+          if (msg.ram_mb !== undefined) {
+            document.getElementById('chip-ram-val').textContent = `${msg.ram_mb} MB`;
+          }
+        } else if (msg.type === 'asr') {
+          stageDone('asr', msg.text, msg.latency_ms);
+          stageProcessing('mt');
+        } else if (msg.type === 'mt') {
+          stageDone('mt', msg.text, msg.latency_ms);
+          stageProcessing('tts');
+        } else if (msg.type === 'tts') {
+          stageDone('tts', `${msg.duration_sec}s audio`, msg.latency_ms);
+
+          const srcText = document.getElementById('asr-output').textContent;
+          const tgtText = document.getElementById('mt-output').textContent;
+          const asrMs = document.getElementById('asr-latency').textContent.replace(' ms', '');
+          const mtMs = document.getElementById('mt-latency').textContent.replace(' ms', '');
+          const total = msg.total_ms || (parseFloat(asrMs || 0) + parseFloat(mtMs || 0) + msg.latency_ms);
+
+          showOutput(srcText, tgtText, asrMs, mtMs, msg.latency_ms, total,
+            msg.audio_b64, msg.duration_sec, 24000);
+        } else if (msg.type === 'error') {
+          toast(msg.message, 'error');
+          ['asr', 'mt', 'tts'].forEach(s => {
+            const el = document.getElementById(`stage-${s}`);
+            if (el && el.classList.contains('processing')) {
+              stageError(s, msg.message);
+            }
+          });
+        }
+      };
+    }
+
+    /* ─── Waveform ───────────────────────────────────────────────────────────── */
+    function startWaveform() {
+      const canvas = document.getElementById('waveform-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      function draw() {
+        if (!state.analyser) return;
+        waveAnimId = requestAnimationFrame(draw);
+
+        const W = canvas.width = canvas.offsetWidth;
+        const H = canvas.height = canvas.offsetHeight;
+        const buf = new Uint8Array(state.analyser.frequencyBinCount);
+        state.analyser.getByteTimeDomainData(buf);
+
+        ctx.clearRect(0, 0, W, H);
+        ctx.strokeStyle = 'rgba(0, 212, 255, 0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = 'rgba(0, 212, 255, 0.4)';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        const step = W / buf.length;
+        for (let i = 0; i < buf.length; i++) {
+          const x = i * step;
+          const y = (buf[i] / 128) * H / 2;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      draw();
+    }
+
+    function stopWaveform() {
+      if (waveAnimId) { cancelAnimationFrame(waveAnimId); waveAnimId = null; }
+      const canvas = document.getElementById('waveform-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = 'rgba(0, 212, 255, 0.2)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height / 2);
+      ctx.lineTo(canvas.width, canvas.height / 2);
+      ctx.stroke();
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       TOAST
+    ═══════════════════════════════════════════════════════════════════════════ */
+    function toast(msg, type = 'info') {
+      const icons = { info: 'ℹ️', success: '✅', error: '❌' };
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
+      document.getElementById('toast-container').appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transition = 'opacity .3s';
+        setTimeout(() => el.remove(), 300);
+      }, 4000);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       UTILS
+    ═══════════════════════════════════════════════════════════════════════════ */
+    function log(...args) { console.log('[OneVoice]', ...args); }
+  </script>
+</body>
+
+</html>

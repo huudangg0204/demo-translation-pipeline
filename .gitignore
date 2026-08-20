@@ -1,0 +1,29 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Large Model weights (Download via download_models.sh)
+models/
+
+# Temporary audio test files
+test_output.wav
+*.wav
+*.mp3
+*.ogg
+*.flac
+*.m4a
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
