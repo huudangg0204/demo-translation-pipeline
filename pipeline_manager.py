@@ -594,9 +594,9 @@ class TTSWrapper:
 
         tts_dir = MODELS_DIR / self.cfg.tts_dir
         int8_model = self.cfg.tts_model.replace(".onnx", ".int8.onnx")
-
+        
         model_path = None
-        for p in [tts_dir / int8_model, tts_dir / self.cfg.tts_model, MODELS_DIR / "kokoro" / "kokoro-v1.0.int8.onnx", MODELS_DIR / "kokoro" / "kokoro-v1.0.onnx"]:
+        for p in [tts_dir / self.cfg.tts_model, MODELS_DIR / "kokoro" / "kokoro-v1.0.onnx", tts_dir / int8_model, MODELS_DIR / "kokoro" / "kokoro-v1.0.int8.onnx"]:
             if p.exists():
                 model_path = p
                 break

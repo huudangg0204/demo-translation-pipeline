@@ -9,6 +9,10 @@ Hỗ trợ 4 luồng dịch:
   VI → ZH : Zipformer 30M + Opus-MT vi-zh + Kokoro ZH
   ZH → VI : Paraformer ZH INT8 + Opus-MT zh-vi + Kokoro VI
 
+Chế độ:
+  1. Turn-based (Batch)     : /ws/pipeline          — Thu âm → bấm Stop → ASR → MT → TTS
+  2. Free-hand (Continuous) : /ws/pipeline-continuous — Mic liên tục → VAD cắt câu → ASR/MT/TTS async queue
+
 Run:
   cd demo
   uvicorn app:app --reload --port 8000
@@ -16,6 +20,7 @@ Run:
 
 import asyncio
 import base64
+import concurrent.futures
 import io
 import json
 import logging
@@ -39,6 +44,7 @@ from pipeline_manager import (
     _to_wav_bytes,
     _get_ram_mb,
 )
+from vad_streamer import VADStreamer, VADConfig
 
 # ─── Paths ──────────────────────────────────────────────────────────────────
 BASE_DIR   = Path(__file__).parent
@@ -56,8 +62,11 @@ log = logging.getLogger("onevoice.app")
 app = FastAPI(
     title="OneVoice AI — Plug-and-Play S2S Demo",
     description="Speech-to-Speech đa ngôn ngữ (VI ↔ EN, VI ↔ ZH)",
-    version="2.0.0",
+    version="3.0.0",
 )
+
+# ─── Thread pool cho ASR/MT/TTS blocking calls ───────────────────────────────
+_executor = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix="onevoice")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # ─── Global Pipeline Manager ────────────────────────────────────────────────
@@ -358,6 +367,304 @@ async def ws_pipeline(ws: WebSocket):
         log.info("WebSocket client disconnected")
     except Exception as e:
         log.error(f"WebSocket error: {e}")
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# WEBSOCKET — Free-hand Continuous Streaming Pipeline
+# ════════════════════════════════════════════════════════════════════════════
+
+@app.websocket("/ws/pipeline-continuous")
+async def ws_pipeline_continuous(ws: WebSocket):
+    """
+    WebSocket protocol (Continuous / Free-hand mode):
+
+    Client → Server:
+      binary:  raw PCM float32 LE, 16kHz mono chunks (~64ms each)
+      text {type: "set_vad", silence_ms: 500, threshold: 0.5}   — đổi tham số VAD realtime
+      text {type: "switch", direction: "vi-en"}                 — đổi cặp ngôn ngữ
+      text {type: "pause"}                                       — tạm dừng
+      text {type: "resume"}                                      — tiếp tục
+      text {type: "status"}                                      — truy vấn trạng thái
+
+    Server → Client:
+      {type: "status",   direction, models, ram_mb}              — trạng thái pipeline
+      {type: "vad_start", uid}                                   — người dùng bắt đầu nói câu mới
+      {type: "asr",      uid, text, latency_ms}                  — kết quả ASR
+      {type: "mt",       uid, text, latency_ms}                  — kết quả MT
+      {type: "tts",      uid, audio_b64, duration_sec, latency_ms, total_ms} — audio TTS
+      {type: "vad_info", threshold, noise_floor, silence_ms, backend}        — thông số VAD hiện tại
+      {type: "error",    uid, stage, message}                    — lỗi 1 câu (không dừng stream)
+    """
+    await ws.accept()
+    log.info("Continuous WS client connected")
+
+    loop = asyncio.get_event_loop()
+    paused = False
+    session_start = time.perf_counter()
+
+    # ─── Hàng đợi nội bộ ──────────────────────────────────────────────────
+    mt_queue:  asyncio.Queue = asyncio.Queue(maxsize=10)
+    tts_queue: asyncio.Queue = asyncio.Queue(maxsize=10)
+
+    async def send_json(obj: dict):
+        try:
+            await ws.send_text(json.dumps(obj, ensure_ascii=False))
+        except Exception:
+            pass
+
+    # ─── Gửi trạng thái khởi tạo ──────────────────────────────────────────
+    await send_json({"type": "status", **pm.get_status()})
+
+    # ─── VAD callback: người dùng bắt đầu nói ─────────────────────────────
+    def on_speech_start(uid: int):
+        asyncio.run_coroutine_threadsafe(
+            send_json({"type": "vad_start", "uid": uid}),
+            loop,
+        )
+
+    # ─── VAD callback: utterance hoàn chỉnh → đẩy vào ASR ─────────────────
+    def on_utterance(samples: np.ndarray, uid: int):
+        if paused:
+            log.debug(f"Continuous WS paused — utterance {uid} dropped")
+            return
+        if not pm.is_ready:
+            asyncio.run_coroutine_threadsafe(
+                send_json({"type": "error", "uid": uid, "stage": "asr",
+                           "message": "Pipeline chưa sẵn sàng"}),
+                loop,
+            )
+            return
+
+        t_utterance_start = time.perf_counter()
+
+        # ASR chạy trong thread pool (blocking)
+        def _run_asr():
+            try:
+                asr_r = pm._asr.transcribe(samples, 16000)
+                src_text = asr_r["text"].strip()
+                if not src_text:
+                    log.debug(f"ASR uid={uid} returned empty text — skipped")
+                    return
+                # Phát event ASR về client
+                asyncio.run_coroutine_threadsafe(
+                    send_json({"type": "asr", "uid": uid,
+                               "text": src_text, "latency_ms": asr_r["latency_ms"]}),
+                    loop,
+                )
+                # Đẩy vào MT queue
+                mt_item = (uid, src_text, t_utterance_start, asr_r["latency_ms"])
+                asyncio.run_coroutine_threadsafe(
+                    mt_queue.put(mt_item), loop
+                )
+            except Exception as e:
+                log.error(f"ASR error uid={uid}: {e}")
+                asyncio.run_coroutine_threadsafe(
+                    send_json({"type": "error", "uid": uid, "stage": "asr", "message": str(e)}),
+                    loop,
+                )
+
+        _executor.submit(_run_asr)
+
+    # ─── Khởi tạo VAD Streamer ─────────────────────────────────────────────
+    vad_config = VADConfig(
+        silence_limit_ms=500,
+        min_speech_ms=200,
+        max_speech_ms=10_000,
+    )
+    vad = VADStreamer(
+        config=vad_config,
+        sample_rate=16000,
+        on_speech_start=on_speech_start,
+        on_utterance=on_utterance,
+    )
+
+    # ─── MT Worker ────────────────────────────────────────────────────────
+    async def mt_worker():
+        while True:
+            try:
+                item = await asyncio.wait_for(mt_queue.get(), timeout=1.0)
+            except asyncio.TimeoutError:
+                continue
+            except asyncio.CancelledError:
+                break
+
+            uid, src_text, t_start, asr_ms = item
+            try:
+                mt_r = await loop.run_in_executor(
+                    _executor, lambda: pm._mt.translate(src_text)
+                )
+                tgt_text = mt_r["text"].strip()
+                await send_json({"type": "mt", "uid": uid,
+                                 "text": tgt_text, "latency_ms": mt_r["latency_ms"]})
+                # Đẩy vào TTS queue
+                await tts_queue.put((uid, tgt_text, t_start, asr_ms, mt_r["latency_ms"]))
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                log.error(f"MT error uid={uid}: {e}")
+                await send_json({"type": "error", "uid": uid, "stage": "mt", "message": str(e)})
+            finally:
+                mt_queue.task_done()
+
+    # ─── TTS Worker ───────────────────────────────────────────────────────
+    async def tts_worker():
+        while True:
+            try:
+                item = await asyncio.wait_for(tts_queue.get(), timeout=1.0)
+            except asyncio.TimeoutError:
+                continue
+            except asyncio.CancelledError:
+                break
+
+            uid, tgt_text, t_start, asr_ms, mt_ms = item
+            if not tgt_text:
+                tts_queue.task_done()
+                continue
+
+            try:
+                tts_r = await loop.run_in_executor(
+                    _executor, lambda: pm._tts.synthesize(tgt_text)
+                )
+                total_ms = round((time.perf_counter() - t_start) * 1000, 1)
+                audio_b64 = base64.b64encode(tts_r["wav_bytes"]).decode()
+                await send_json({
+                    "type":         "tts",
+                    "uid":          uid,
+                    "audio_b64":    audio_b64,
+                    "duration_sec": tts_r["duration_sec"],
+                    "latency_ms":   tts_r["latency_ms"],
+                    "total_ms":     total_ms,
+                    "sample_rate":  tts_r.get("sample_rate", 24000),
+                    "metrics": {
+                        "asr_ms":   asr_ms,
+                        "mt_ms":    mt_ms,
+                        "tts_ms":   tts_r["latency_ms"],
+                        "total_ms": total_ms,
+                    },
+                })
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                log.error(f"TTS error uid={uid}: {e}")
+                await send_json({"type": "error", "uid": uid, "stage": "tts", "message": str(e)})
+            finally:
+                tts_queue.task_done()
+
+    # ─── Khởi động workers ────────────────────────────────────────────────
+    mt_task  = asyncio.create_task(mt_worker(),  name="mt_worker")
+    tts_task = asyncio.create_task(tts_worker(), name="tts_worker")
+
+    try:
+        while True:
+            try:
+                msg = await asyncio.wait_for(ws.receive(), timeout=30.0)
+            except asyncio.TimeoutError:
+                await send_json({"type": "ping"})
+                continue
+
+            # ─── Xử lý text control messages ──────────────────────────────
+            if "text" in msg:
+                try:
+                    payload = json.loads(msg["text"])
+                except Exception:
+                    continue
+
+                msg_type = payload.get("type")
+
+                if msg_type == "set_vad":
+                    # Cập nhật tham số VAD realtime
+                    updates = {}
+                    if "silence_ms" in payload:
+                        updates["silence_limit_ms"] = int(payload["silence_ms"])
+                    if "threshold" in payload:
+                        updates["silero_threshold"] = float(payload["threshold"])
+                        updates["initial_threshold"] = float(payload["threshold"])
+                    if "min_speech_ms" in payload:
+                        updates["min_speech_ms"] = int(payload["min_speech_ms"])
+                    if updates:
+                        vad.update_config(**updates)
+                    # Trả về thông số VAD hiện tại
+                    await send_json({
+                        "type":         "vad_info",
+                        "silence_ms":   vad.config.silence_limit_ms,
+                        "threshold":    round(vad.current_threshold, 4),
+                        "noise_floor":  round(vad.noise_floor, 4),
+                        "min_speech_ms": vad.config.min_speech_ms,
+                        "backend":      vad.backend,
+                    })
+
+                elif msg_type == "pause":
+                    paused = True
+                    vad.reset()
+                    await send_json({"type": "paused"})
+
+                elif msg_type == "resume":
+                    paused = False
+                    await send_json({"type": "resumed"})
+
+                elif msg_type == "switch":
+                    direction = payload.get("direction", "vi-en")
+                    if direction not in PIPELINE_CONFIGS:
+                        await send_json({"type": "error", "uid": -1, "stage": "switch",
+                                         "message": f"Invalid direction: {direction}"})
+                        continue
+                    paused = True
+                    vad.reset()
+                    await send_json({"type": "switching", "direction": direction})
+
+                    def _do_switch():
+                        with _switch_lock:
+                            pm.switch(direction, preload=True)
+
+                    threading.Thread(target=_do_switch, daemon=True).start()
+                    for _ in range(120):
+                        await asyncio.sleep(0.5)
+                        if pm.is_ready and pm.active_direction == direction:
+                            break
+                    paused = False
+                    await send_json({"type": "status", **pm.get_status()})
+
+                elif msg_type == "status":
+                    await send_json({"type": "status", **pm.get_status()})
+                    await send_json({
+                        "type":         "vad_info",
+                        "silence_ms":   vad.config.silence_limit_ms,
+                        "threshold":    round(vad.current_threshold, 4),
+                        "noise_floor":  round(vad.noise_floor, 4),
+                        "min_speech_ms": vad.config.min_speech_ms,
+                        "backend":      vad.backend,
+                    })
+
+                elif msg_type == "flush":
+                    # Buộc kết thúc câu đang nói dở
+                    vad.flush()
+
+            # ─── Xử lý binary: PCM audio chunk ────────────────────────────
+            elif "bytes" in msg and msg["bytes"]:
+                if paused:
+                    continue
+                raw = msg["bytes"]
+                n = len(raw) // 4
+                if n == 0:
+                    continue
+                chunk = np.frombuffer(raw[:n * 4], dtype="<f4").copy()
+                vad.feed(chunk)
+
+    except WebSocketDisconnect:
+        log.info("Continuous WS client disconnected")
+    except Exception as e:
+        log.error(f"Continuous WS error: {e}")
+    finally:
+        # Cleanup
+        vad.flush()
+        mt_task.cancel()
+        tts_task.cancel()
+        try:
+            await asyncio.gather(mt_task, tts_task, return_exceptions=True)
+        except Exception:
+            pass
+        duration = round(time.perf_counter() - session_start, 1)
+        log.info(f"Continuous WS session ended — duration={duration}s")
 
 
 # ════════════════════════════════════════════════════════════════════════════

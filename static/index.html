@@ -1141,6 +1141,379 @@
       color: var(--text-muted);
       margin-top: 2px;
     }
+    /* ═════════════════════ FREE-HAND CONTINUOUS MODE ════════════════════ */
+    .continuous-panel { display: none; flex-direction: column; gap: 16px; }
+    .continuous-panel.visible { display: flex; }
+
+    .fh-mode-bar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 16px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+    }
+    .fh-mode-label { font-size: 13px; color: var(--text-secondary); flex: 1; }
+    .fh-btn {
+      padding: 9px 22px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--accent) 0%, #00a3cc 100%);
+      color: #000;
+      border: none;
+      cursor: pointer;
+      transition: all .25s;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .fh-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+    .fh-btn.active {
+      background: linear-gradient(135deg, var(--red) 0%, #c0392b 100%);
+      color: #fff;
+      box-shadow: 0 0 16px rgba(248,81,73,.4);
+      animation: mic-beat 1.2s ease-in-out infinite;
+    }
+    .fh-btn-icon { font-size: 16px; }
+
+    /* VAD Controls Row */
+    .vad-controls {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .vad-controls-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-muted);
+    }
+    .vad-slider-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .vad-slider-label { font-size: 12px; color: var(--text-secondary); min-width: 130px; }
+    .vad-slider {
+      flex: 1;
+      accent-color: var(--accent);
+      height: 4px;
+      cursor: pointer;
+    }
+    .vad-slider-val {
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent);
+      min-width: 50px;
+      text-align: right;
+    }
+    .vad-status-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .vad-pill {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-hover);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      transition: all .2s;
+    }
+    .vad-pill.speaking {
+      background: rgba(63,185,80,.15);
+      color: var(--green);
+      border-color: var(--green);
+    }
+    .vad-pill.processing {
+      background: rgba(0,212,255,.1);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    /* Conversation Feed */
+    .conv-feed-wrap {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .conv-feed-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .conv-feed-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .conv-count {
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .conv-clear-btn {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: none;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .conv-clear-btn:hover { color: var(--red); border-color: var(--red); }
+
+    .conv-feed {
+      max-height: 420px;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .conv-feed:empty::after {
+      content: 'Chờ câu nói... Hãy đeo tai nghe và bất chế độ Rảnh tay →';
+      color: var(--text-muted);
+      font-size: 13px;
+      text-align: center;
+      padding: 20px;
+      display: block;
+    }
+
+    /* Utterance card */
+    .utterance-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      transition: border-color .3s;
+      animation: fadeSlideIn .25s ease;
+    }
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .utterance-card.speaking  { border-color: var(--green); }
+    .utterance-card.asr-done  { border-color: var(--accent); }
+    .utterance-card.mt-done   { border-color: var(--purple); }
+    .utterance-card.tts-done  { border-color: var(--border); }
+    .utterance-card.has-error { border-color: var(--red); }
+
+    .utt-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .utt-id {
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      background: var(--bg-elevated);
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+    .utt-stage-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+    .utt-badge {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .utt-badge.waiting  { background: var(--bg-hover);        color: var(--text-muted); }
+    .utt-badge.active   { background: rgba(0,212,255,.15);    color: var(--accent); animation: pulse-badge .8s ease-in-out infinite; }
+    .utt-badge.done     { background: rgba(63,185,80,.15);    color: var(--green); }
+    .utt-badge.error    { background: rgba(248,81,73,.15);    color: var(--red); }
+    .utt-badge.playing  { background: rgba(163,113,247,.15);  color: var(--purple); animation: pulse-badge .8s ease-in-out infinite; }
+    .utt-badge.played   { background: rgba(163,113,247,.1);   color: var(--purple); }
+    @keyframes pulse-badge { 0%,100% { opacity:1; } 50% { opacity:.5; } }
+
+    .utt-total-ms {
+      margin-left: auto;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+    }
+
+    .utt-texts {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .utt-text-row { display: flex; gap: 8px; align-items: flex-start; }
+    .utt-lang-tag {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      min-width: 36px;
+      padding-top: 2px;
+      text-transform: uppercase;
+    }
+    .utt-text-val {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-primary);
+      flex: 1;
+    }
+    .utt-text-val.placeholder { color: var(--text-muted); font-style: italic; }
+    .utt-ms {
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      padding-top: 3px;
+      min-width: 48px;
+      text-align: right;
+    }
+
+    /* Continuous mini waveform */
+    .fh-wave-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .fh-waveform-wrap {
+      flex: 1;
+      height: 50px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    #fh-waveform-canvas { width: 100%; height: 100%; }
+    .fh-vad-live {
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      min-width: 80px;
+      text-align: right;
+      padding: 4px 8px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      transition: all .2s;
+    }
+    .fh-vad-live.speaking { color: var(--green); border-color: var(--green); background: rgba(63,185,80,.08); }
+    .fh-vad-live.listening { color: var(--accent); border-color: var(--accent); background: rgba(0,212,255,.08); }
+
+    /* ═════════════════════ RMS METER ═════════════════════ */
+    .rms-section {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .rms-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .rms-live-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--accent);
+    }
+    .rms-meter-wrap {
+      position: relative;
+      height: 32px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .rms-meter-bar {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 0%;
+      background: linear-gradient(90deg, var(--green) 0%, #f0b429 70%, var(--red) 100%);
+      transition: width 0.06s linear;
+      border-radius: var(--radius-sm);
+    }
+    /* Đường ngưỡng threshold */
+    .rms-threshold-line {
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 2px;
+      background: rgba(255,255,255,0.85);
+      pointer-events: none;
+      transition: left 0.1s;
+    }
+    .rms-threshold-label {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 9px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #fff;
+      white-space: nowrap;
+      padding-left: 4px;
+      pointer-events: none;
+      transition: left 0.1s;
+    }
+    /* Cầu hình peaks */
+    .rms-peak-dot {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px; height: 18px;
+      background: rgba(255,255,255,0.5);
+      border-radius: 2px;
+      transition: left 0.3s;
+    }
+    .rms-stats-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .rms-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 4px 10px;
+      min-width: 70px;
+    }
+    .rms-stat-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+    .rms-stat-val {
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: var(--accent);
+      margin-top: 1px;
+    }
+    .rms-stat-val.green  { color: var(--green); }
+    .rms-stat-val.yellow { color: var(--yellow); }
+    .rms-stat-val.red    { color: var(--red); }
   </style>
 </head>
 
@@ -1295,7 +1668,10 @@
       <!-- Tabs -->
       <div class="input-tabs">
         <button class="tab-btn active" id="tab-mic" onclick="switchTab('mic')">
-          🎤 Ghi âm trực tiếp
+          🎤 Push-to-Talk
+        </button>
+        <button class="tab-btn" id="tab-continuous" onclick="switchTab('continuous')">
+          🔴 Rảnh tay (Live)
         </button>
         <button class="tab-btn" id="tab-file" onclick="switchTab('file')">
           📁 Upload file audio
@@ -1338,6 +1714,117 @@
           </div>
         </div>
       </div>
+
+      <!-- Continuous (Free-hand) Panel -->
+      <div class="continuous-panel" id="continuous-panel">
+
+        <!-- Waveform + VAD live indicator -->
+        <div class="fh-wave-row">
+          <div class="fh-waveform-wrap">
+            <canvas id="fh-waveform-canvas"></canvas>
+          </div>
+          <div class="fh-vad-live listening" id="fh-vad-live">🔵 Chờ...</div>
+        </div>
+
+        <!-- Start/Stop button + status -->
+        <div class="fh-mode-bar">
+          <div class="fh-mode-label">
+            <strong id="fh-status-text">Sẵn sàng</strong>
+            <span id="fh-status-sub" style="color:var(--text-muted);font-size:12px;display:block;margin-top:2px">
+              Nhấn “Bắt đầu”, đeo tai nghe rồi nói tự nhiên.
+            </span>
+          </div>
+          <button class="fh-btn" id="fh-toggle-btn" onclick="toggleContinuous()">
+            <span class="fh-btn-icon">▶️</span>
+            <span id="fh-btn-label">Bắt đầu</span>
+          </button>
+        </div>
+
+        <!-- VAD Controls -->
+        <div class="vad-controls">
+          <div class="vad-controls-title">⚙️ Cài đặt VAD (Tự động ngắt câu)</div>
+
+          <div class="vad-slider-row">
+            <span class="vad-slider-label">Im lặng ngắt câu</span>
+            <input type="range" class="vad-slider" id="fh-silence-slider"
+              min="200" max="1500" step="50" value="500"
+              oninput="onSilenceSliderChange(this.value)" />
+            <span class="vad-slider-val" id="fh-silence-val">500 ms</span>
+          </div>
+
+          <div class="vad-status-row">
+            <span class="vad-pill" id="fh-pill-backend">backend: —</span>
+            <span class="vad-pill" id="fh-pill-threshold">Độ nhạy: —</span>
+            <span class="vad-pill" id="fh-pill-noise">Noise: —</span>
+            <span class="vad-pill" id="fh-pill-queue">⟳ Queue: 0</span>
+          </div>
+        </div>
+
+        <!-- RMS Visualizer + Threshold Control -->
+        <div class="rms-section" id="rms-section">
+          <div class="rms-section-title">
+            📊 Đồng hồ âm lượng đầu vào (RMS Realtime)
+            <span class="rms-live-val" id="rms-live-text">RMS: —</span>
+          </div>
+
+          <!-- Meter bar -->
+          <div class="rms-meter-wrap" id="rms-meter-wrap">
+            <div class="rms-meter-bar" id="rms-bar"></div>
+            <div class="rms-threshold-line" id="rms-thr-line" style="left:20%"></div>
+            <div class="rms-threshold-label" id="rms-thr-label" style="left:calc(20% + 4px)">ngưỡng</div>
+            <div class="rms-peak-dot" id="rms-peak-dot" style="left:0%"></div>
+          </div>
+
+          <!-- Threshold slider -->
+          <div class="vad-slider-row">
+            <span class="vad-slider-label">Ngưỡng bắt âm (Speech thr.)</span>
+            <input type="range" class="vad-slider" id="fh-threshold-slider"
+              min="0.005" max="0.15" step="0.002" value="0.02"
+              oninput="onThresholdSliderChange(this.value)" />
+            <span class="vad-slider-val" id="fh-threshold-val">0.020</span>
+          </div>
+
+          <!-- Stats row -->
+          <div class="rms-stats-row">
+            <div class="rms-stat">
+              <span class="rms-stat-label">RMS hiện tại</span>
+              <span class="rms-stat-val" id="rms-stat-cur">0.000</span>
+            </div>
+            <div class="rms-stat">
+              <span class="rms-stat-label">Peak 3s</span>
+              <span class="rms-stat-val green" id="rms-stat-peak">0.000</span>
+            </div>
+            <div class="rms-stat">
+              <span class="rms-stat-label">Ngưỡng</span>
+              <span class="rms-stat-val yellow" id="rms-stat-thr">0.020</span>
+            </div>
+            <div class="rms-stat">
+              <span class="rms-stat-label">Trạng thái</span>
+              <span class="rms-stat-val" id="rms-stat-state" style="color:var(--text-muted)">—</span>
+            </div>
+          </div>
+
+          <!-- Hint -->
+          <div style="font-size:11px;color:var(--text-muted);line-height:1.5">
+            • <strong>Vạch trắng</strong> = ngưỡng hiện tại. RMS vượt vạch → hệ thống coi là đang nói.<br/>
+            • Điều chỉnh ngưỡng cao lên nếu muốn lọc tiếng <em>um / erm</em> và tiếng thở nhớ.<br/>
+            • Giá trị gợi ý: tiếng nói bình thường ~0.04–0.10; tiếng thở/um ~0.005–0.025.
+          </div>
+        </div>
+
+        <!-- Conversation Feed -->
+        <div class="conv-feed-wrap">
+          <div class="conv-feed-header">
+            <div class="conv-feed-title">
+              💬 Hội thoại liên tục
+              <span class="conv-count" id="fh-utt-count">0 câu</span>
+            </div>
+            <button class="conv-clear-btn" onclick="clearConvFeed()">Xóa tất cả</button>
+          </div>
+          <div class="conv-feed" id="conv-feed"></div>
+        </div>
+
+      </div><!-- /continuous-panel -->
 
       <!-- File Panel -->
       <div class="file-panel" id="file-panel">
@@ -2102,6 +2589,581 @@
        UTILS
     ═══════════════════════════════════════════════════════════════════════════ */
     function log(...args) { console.log('[OneVoice]', ...args); }
+
+    /* ════════════════════════════════════════════════════════════════════════════
+       FREE-HAND CONTINUOUS MODE
+    ════════════════════════════════════════════════════════════════════════════ */
+    const fh = {
+      active:        false,
+      ws:            null,
+      micStream:     null,
+      audioCtx:      null,
+      analyser:      null,
+      processor:     null,
+      playbackQueue: null,
+      uttCards:      {},   // uid -> { card, asr, mt, tts }
+      uttCount:      0,
+      silenceMs:     500,
+      waveAnimId:    null,
+      queueSize:     0,    // TTS audio chunks waiting to play
+    };
+
+    /* ─── AudioPlaybackQueue ──────────────────────────────────────────────── */
+    class AudioPlaybackQueue {
+      constructor() {
+        this._ctx      = new (window.AudioContext || window.webkitAudioContext)();
+        this._queue    = [];   // Array of { buf: AudioBuffer, uid, onStart, onEnd }
+        this._playing  = false;
+        this._current  = null;
+      }
+
+      enqueue(wavBase64, uid, sampleRate, onStart, onEnd) {
+        const raw    = atob(wavBase64);
+        const bytes  = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+        const ab = bytes.buffer;
+        this._ctx.decodeAudioData(ab, (buf) => {
+          this._queue.push({ buf, uid, onStart: onStart || (() => {}), onEnd: onEnd || (() => {}) });
+          fh.queueSize++;
+          fhUpdateQueuePill();
+          if (!this._playing) this._playNext();
+        }, (e) => {
+          log('Audio decode error uid=' + uid, e);
+          onEnd && onEnd();
+        });
+      }
+
+      _playNext() {
+        if (this._queue.length === 0) {
+          this._playing = false;
+          return;
+        }
+        this._playing = true;
+        const item = this._queue.shift();
+        fh.queueSize = Math.max(0, fh.queueSize - 1);
+        fhUpdateQueuePill();
+        const src = this._ctx.createBufferSource();
+        src.buffer = item.buf;
+        src.connect(this._ctx.destination);
+        this._current = src;
+        item.onStart(item.uid);
+        src.onended = () => {
+          item.onEnd(item.uid);
+          this._playNext();
+        };
+        src.start(0);
+      }
+
+      stop() {
+        if (this._current) {
+          try { this._current.stop(); } catch(e) {}
+          this._current = null;
+        }
+        this._queue = [];
+        this._playing = false;
+        fh.queueSize = 0;
+        fhUpdateQueuePill();
+      }
+
+      resume() {
+        if (this._ctx.state === 'suspended') this._ctx.resume();
+      }
+    }
+
+    /* ─── Helpers UI ──────────────────────────────────────────────────────────── */
+    function fhUpdateQueuePill() {
+      const p = document.getElementById('fh-pill-queue');
+      if (p) p.textContent = `⟳ Queue: ${fh.queueSize}`;
+    }
+
+    function fhSetStatus(text, sub) {
+      const t = document.getElementById('fh-status-text');
+      const s = document.getElementById('fh-status-sub');
+      if (t) t.textContent = text;
+      if (s && sub !== undefined) s.textContent = sub;
+    }
+
+    function fhSetVadLive(text, cls) {
+      const el = document.getElementById('fh-vad-live');
+      if (!el) return;
+      el.textContent = text;
+      el.className = 'fh-vad-live ' + (cls || '');
+    }
+
+    function clearConvFeed() {
+      const feed = document.getElementById('conv-feed');
+      if (feed) feed.innerHTML = '';
+      fh.uttCards = {};
+      fh.uttCount = 0;
+      const c = document.getElementById('fh-utt-count');
+      if (c) c.textContent = '0 câu';
+    }
+
+    /* ─── Utterance Card ──────────────────────────────────────────────────── */
+    function createUtteranceCard(uid) {
+      const feed = document.getElementById('conv-feed');
+      fh.uttCount++;
+      const c = document.getElementById('fh-utt-count');
+      if (c) c.textContent = `${fh.uttCount} câu`;
+
+      const card = document.createElement('div');
+      card.className = 'utterance-card speaking';
+      card.id = `utt-card-${uid}`;
+      card.innerHTML = `
+        <div class="utt-header">
+          <span class="utt-id">#${uid}</span>
+          <div class="utt-stage-badges">
+            <span class="utt-badge active" id="utt-badge-asr-${uid}">ASR</span>
+            <span class="utt-badge waiting" id="utt-badge-mt-${uid}">MT</span>
+            <span class="utt-badge waiting" id="utt-badge-tts-${uid}">TTS</span>
+          </div>
+          <span class="utt-total-ms" id="utt-total-${uid}">—</span>
+        </div>
+        <div class="utt-texts">
+          <div class="utt-text-row">
+            <span class="utt-lang-tag" id="utt-src-lang-${uid}">SRC</span>
+            <span class="utt-text-val placeholder" id="utt-src-${uid}">đang nhận dạng...</span>
+            <span class="utt-ms" id="utt-asr-ms-${uid}">—</span>
+          </div>
+          <div class="utt-text-row">
+            <span class="utt-lang-tag" id="utt-tgt-lang-${uid}">TGT</span>
+            <span class="utt-text-val placeholder" id="utt-tgt-${uid}">—</span>
+            <span class="utt-ms" id="utt-mt-ms-${uid}">—</span>
+          </div>
+        </div>
+      `;
+      feed.appendChild(card);
+      // Scroll xuống cuối
+      feed.scrollTop = feed.scrollHeight;
+
+      const meta = PIPELINE_META[state.activeDirection] || PIPELINE_META['vi-en'];
+      const srcEl = document.getElementById(`utt-src-lang-${uid}`);
+      const tgtEl = document.getElementById(`utt-tgt-lang-${uid}`);
+      if (srcEl) srcEl.textContent = (meta.srcLabel || 'SRC').split(' ')[0];
+      if (tgtEl) tgtEl.textContent = (meta.tgtLabel || 'TGT').split(' ')[0];
+
+      fh.uttCards[uid] = { card };
+      return card;
+    }
+
+    function uttUpdateASR(uid, text, ms) {
+      const srcEl = document.getElementById(`utt-src-${uid}`);
+      if (srcEl) { srcEl.textContent = text; srcEl.classList.remove('placeholder'); }
+      const msEl = document.getElementById(`utt-asr-ms-${uid}`);
+      if (msEl) msEl.textContent = `${Math.round(ms)}ms`;
+      const badge = document.getElementById(`utt-badge-asr-${uid}`);
+      if (badge) { badge.className = 'utt-badge done'; badge.textContent = `ASR ${Math.round(ms)}ms`; }
+      const card = document.getElementById(`utt-card-${uid}`);
+      if (card) { card.className = 'utterance-card asr-done'; }
+      // MT badge → active
+      const mtBadge = document.getElementById(`utt-badge-mt-${uid}`);
+      if (mtBadge) mtBadge.className = 'utt-badge active';
+    }
+
+    function uttUpdateMT(uid, text, ms) {
+      const tgtEl = document.getElementById(`utt-tgt-${uid}`);
+      if (tgtEl) { tgtEl.textContent = text; tgtEl.classList.remove('placeholder'); }
+      const msEl = document.getElementById(`utt-mt-ms-${uid}`);
+      if (msEl) msEl.textContent = `${Math.round(ms)}ms`;
+      const badge = document.getElementById(`utt-badge-mt-${uid}`);
+      if (badge) { badge.className = 'utt-badge done'; badge.textContent = `MT ${Math.round(ms)}ms`; }
+      const card = document.getElementById(`utt-card-${uid}`);
+      if (card) { card.className = 'utterance-card mt-done'; }
+      // TTS badge → active
+      const ttsBadge = document.getElementById(`utt-badge-tts-${uid}`);
+      if (ttsBadge) ttsBadge.className = 'utt-badge active';
+    }
+
+    function uttUpdateTTSPlaying(uid) {
+      const badge = document.getElementById(`utt-badge-tts-${uid}`);
+      if (badge) { badge.className = 'utt-badge playing'; badge.textContent = '🔊 Đang phát'; }
+    }
+
+    function uttUpdateTTSDone(uid, totalMs) {
+      const badge = document.getElementById(`utt-badge-tts-${uid}`);
+      if (badge) { badge.className = 'utt-badge played'; badge.textContent = '✓ Đã phát'; }
+      const card = document.getElementById(`utt-card-${uid}`);
+      if (card) card.className = 'utterance-card tts-done';
+      const totEl = document.getElementById(`utt-total-${uid}`);
+      if (totEl && totalMs) totEl.textContent = `E2E: ${Math.round(totalMs)}ms`;
+    }
+
+    function uttMarkError(uid, stage, msg) {
+      const badge = document.getElementById(`utt-badge-${stage}-${uid}`);
+      if (badge) { badge.className = 'utt-badge error'; badge.textContent = `${stage.toUpperCase()} ❌`; }
+      const card = document.getElementById(`utt-card-${uid}`);
+      if (card) card.className = 'utterance-card has-error';
+      log(`Utterance #${uid} error at ${stage}: ${msg}`);
+    }
+
+    /* ─── Toggle Free-hand session ───────────────────────────────────────────── */
+    async function toggleContinuous() {
+      if (fh.active) {
+        await stopContinuous();
+      } else {
+        await startContinuous();
+      }
+    }
+
+    async function startContinuous() {
+      const notReady = Object.entries(state.modelStatus).filter(([k, v]) => v !== 'ready');
+      if (notReady.length > 0) {
+        const names = notReady.map(([k, v]) => `${k.toUpperCase()} (${v})`).join(', ');
+        toast(`Pipeline chưa sẵn sàng: ${names}. Vui lòng chờ!`, 'error');
+        return;
+      }
+
+      // ─── Reset session state trước khi bắt đầu ───────────────────────────
+      // Mỗi WebSocket session mới, server tạo VADStreamer mới với uid bắt lại từ 1.
+      // Nếu còn thẻ cũ trong conv-feed có cùng id (utt-card-1, utt-src-1...),
+      // document.getElementById sẽ tìm nhầm thẻ session trước → log không hiện.
+      clearConvFeed();
+      fh.uttCards  = {};
+      fh.uttCount  = 0;
+      fh.queueSize = 0;
+      fhUpdateQueuePill();
+      // Đồng bộ ngưỡng từ slider (dùng lại giá trị người dùng đã chỉnh)
+      const thrSlider = document.getElementById('fh-threshold-slider');
+      fh.speechThreshold = thrSlider ? parseFloat(thrSlider.value) : 0.02;
+      drawRmsMeterThresholdLine(fh.speechThreshold);
+
+      try {
+        fh.micStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            sampleRate: 16000, channelCount: 1,
+            echoCancellation: true, noiseSuppression: true, autoGainControl: true,
+          }
+        });
+      } catch (e) {
+        toast('Không thể truy cập microphone: ' + e.message, 'error');
+        return;
+      }
+
+      // AudioContext + Analyser
+      fh.audioCtx  = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+      const src    = fh.audioCtx.createMediaStreamSource(fh.micStream);
+      fh.analyser  = fh.audioCtx.createAnalyser();
+      fh.analyser.fftSize = 512;
+      src.connect(fh.analyser);
+
+      // ScriptProcessor: gửi PCM chunk ~1024 samples (64ms) + tính RMS realtime
+      const bufSize = 1024;
+      fh.processor = fh.audioCtx.createScriptProcessor(bufSize, 1, 1);
+      fh.rmsHistory = []; // mảng lưu RMS gần đây cho peak tracking
+      fh.processor.onaudioprocess = (e) => {
+        if (!fh.active) return;
+        const ch = e.inputBuffer.getChannelData(0);
+        // Gửi PCM lên server
+        if (fh.ws && fh.ws.readyState === WebSocket.OPEN) {
+          fh.ws.send(new Float32Array(ch).buffer);
+        }
+        // Tính RMS và cập nhật meter
+        let sum = 0;
+        for (let i = 0; i < ch.length; i++) sum += ch[i] * ch[i];
+        const rms = Math.sqrt(sum / ch.length);
+        fh.lastRms = rms;
+        // Lưu history cho peak (giữ 3s @ 64ms/chunk ~ 47 mẫu)
+        fh.rmsHistory.push(rms);
+        if (fh.rmsHistory.length > 47) fh.rmsHistory.shift();
+        drawRmsMeter(rms);
+      };
+      src.connect(fh.processor);
+      fh.processor.connect(fh.audioCtx.destination);
+      fh.lastRms = 0;
+      fh.rmsHistory = [];
+      fh.rmsPeakFallTimer = 0;
+
+      // Audio Playback Queue
+      fh.playbackQueue = new AudioPlaybackQueue();
+
+      // WebSocket continuous
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      fh.ws = new WebSocket(`${proto}://${location.host}/ws/pipeline-continuous`);
+      fh.ws.binaryType = 'arraybuffer';
+
+      fh.ws.onopen = () => {
+        log('Continuous WS connected');
+        // Thiết lập tham số VAD từ slider hiện tại
+        fh.ws.send(JSON.stringify({ type: 'set_vad', silence_ms: fh.silenceMs }));
+      };
+
+      fh.ws.onerror = (e) => {
+        log('Continuous WS error', e);
+        toast('WebSocket lỗi — thử lại', 'error');
+      };
+
+      fh.ws.onclose = () => {
+        log('Continuous WS closed');
+        if (fh.active) stopContinuous();
+      };
+
+      fh.ws.onmessage = (evt) => {
+        let msg;
+        try { msg = JSON.parse(evt.data); } catch(e) { return; }
+        const uid = msg.uid;
+
+        if (msg.type === 'status') {
+          if (msg.models) {
+            state.modelStatus = {
+              asr: msg.models.asr.status,
+              mt:  msg.models.mt.status,
+              tts: msg.models.tts.status,
+            };
+            updateStatusChip('asr', msg.models.asr.status);
+            updateStatusChip('mt',  msg.models.mt.status);
+            updateStatusChip('tts', msg.models.tts.status);
+          }
+
+        } else if (msg.type === 'vad_info') {
+          const p1 = document.getElementById('fh-pill-backend');
+          const p2 = document.getElementById('fh-pill-threshold');
+          const p3 = document.getElementById('fh-pill-noise');
+          if (p1) p1.textContent = `backend: ${msg.backend}`;
+          if (p2) p2.textContent = `Độ nhạy: ${msg.threshold}`;
+          if (p3) p3.textContent = `Noise: ${msg.noise_floor}`;
+          // Đồng bộ slider nếu server trả về silence_ms khác
+          if (msg.silence_ms && msg.silence_ms !== fh.silenceMs) {
+            fh.silenceMs = msg.silence_ms;
+            const sl = document.getElementById('fh-silence-slider');
+            if (sl) sl.value = fh.silenceMs;
+            const sv = document.getElementById('fh-silence-val');
+            if (sv) sv.textContent = `${fh.silenceMs} ms`;
+          }
+
+        } else if (msg.type === 'vad_start') {
+          createUtteranceCard(uid);
+          fhSetVadLive('🟢 Nghe...', 'speaking');
+          fhSetStatus(`Đang nhận dạng câu #${uid}`, '');
+
+        } else if (msg.type === 'asr') {
+          uttUpdateASR(uid, msg.text, msg.latency_ms);
+          fhSetVadLive('🔵 Chờ...', 'listening');
+          fhSetStatus('Đang dịch...', '');
+
+        } else if (msg.type === 'mt') {
+          uttUpdateMT(uid, msg.text, msg.latency_ms);
+          fhSetStatus('Đang sinh âm thanh...', '');
+
+        } else if (msg.type === 'tts') {
+          // Đưa vào hàng đợi phát
+          fh.playbackQueue.resume();
+          fh.playbackQueue.enqueue(
+            msg.audio_b64, uid, msg.sample_rate || 24000,
+            (id) => uttUpdateTTSPlaying(id),
+            (id) => uttUpdateTTSDone(id, msg.total_ms),
+          );
+          fhSetStatus('Sẵn sàng lắng nghe tiếp', '');
+
+        } else if (msg.type === 'error') {
+          uttMarkError(uid, msg.stage || 'asr', msg.message);
+          toast(`Lỗi câu #${uid} (${msg.stage}): ${msg.message}`, 'error');
+
+        } else if (msg.type === 'switching') {
+          fhSetStatus(`Đang chuyển pipeline ${msg.direction}...`, '');
+
+        } else if (msg.type === 'paused') {
+          fhSetStatus('Tạm dừng', '');
+        } else if (msg.type === 'resumed') {
+          fhSetStatus('Tiếp tục...', '');
+        }
+      };
+
+      // Update UI
+      fh.active = true;
+      const btn = document.getElementById('fh-toggle-btn');
+      if (btn) { btn.classList.add('active'); }
+      const lbl = document.getElementById('fh-btn-label');
+      if (lbl) lbl.textContent = 'Dừng lại';
+      const icon = btn ? btn.querySelector('.fh-btn-icon') : null;
+      if (icon) icon.textContent = '⏹️';
+      fhSetStatus('Đang lắng nghe...', 'Đeo tai nghe và nói tự nhiên — hệ thống tự nhận dạng.');
+      fhSetVadLive('🔵 Chờ...', 'listening');
+      startFhWaveform();
+      toast('Đã bắt đầu chế độ Rảnh tay — Hãy nói!', 'success');
+    }
+
+    async function stopContinuous() {
+      fh.active = false;
+
+      if (fh.ws) {
+        try { fh.ws.close(); } catch(e) {}
+        fh.ws = null;
+      }
+      if (fh.processor)  { fh.processor.disconnect();  fh.processor = null; }
+      if (fh.analyser)   { fh.analyser.disconnect();   fh.analyser = null; }
+      if (fh.audioCtx)   { await fh.audioCtx.close();  fh.audioCtx = null; }
+      if (fh.micStream)  { fh.micStream.getTracks().forEach(t => t.stop()); fh.micStream = null; }
+      if (fh.playbackQueue) { fh.playbackQueue.stop(); fh.playbackQueue = null; }
+
+      const btn = document.getElementById('fh-toggle-btn');
+      if (btn) btn.classList.remove('active');
+      const lbl = document.getElementById('fh-btn-label');
+      if (lbl) lbl.textContent = 'Bắt đầu';
+      const icon = btn ? btn.querySelector('.fh-btn-icon') : null;
+      if (icon) icon.textContent = '▶️';
+      fhSetStatus('Sẵn sàng', 'Nhấn “Bắt đầu” để khởi động lại.');
+      fhSetVadLive('🔵 Chờ...', '');
+      stopFhWaveform();
+      toast('Chế độ Rảnh tay đã dừng.', 'info');
+    }
+
+    /* ─── Slider VAD ─────────────────────────────────────────────────────────── */
+    function onSilenceSliderChange(val) {
+      fh.silenceMs = parseInt(val);
+      const sv = document.getElementById('fh-silence-val');
+      if (sv) sv.textContent = `${fh.silenceMs} ms`;
+      if (fh.ws && fh.ws.readyState === WebSocket.OPEN) {
+        fh.ws.send(JSON.stringify({ type: 'set_vad', silence_ms: fh.silenceMs }));
+      }
+    }
+
+    /* ─── Threshold slider (initial_threshold) ─────────────────────────────── */
+    function onThresholdSliderChange(val) {
+      const thr = parseFloat(val);
+      // Cập nhật hiển thị
+      const v = document.getElementById('fh-threshold-val');
+      if (v) v.textContent = thr.toFixed(3);
+      const st = document.getElementById('rms-stat-thr');
+      if (st) st.textContent = thr.toFixed(3);
+      // Lưu vào fh để drawRmsMeter dùng
+      fh.speechThreshold = thr;
+      // Cập nhật vạch threshold trên meter ngay lập tức
+      drawRmsMeterThresholdLine(thr);
+      // Gửi lên server nếu đang kết nối
+      if (fh.ws && fh.ws.readyState === WebSocket.OPEN) {
+        fh.ws.send(JSON.stringify({ type: 'set_vad', threshold: thr }));
+      }
+    }
+
+    /* ─── RMS Meter drawing ──────────────────────────────────────────────────── */
+    // Range hiển thị: 0 ~ RMS_MAX (linear scale, dễ đọc)
+    const RMS_MAX = 0.20;
+
+    function drawRmsMeter(rms) {
+      const thr = fh.speechThreshold || 0.02;
+      // Bar width %
+      const pct = Math.min(rms / RMS_MAX, 1) * 100;
+      const bar = document.getElementById('rms-bar');
+      if (bar) bar.style.width = pct + '%';
+
+      // Peak dot
+      const peakVal = fh.rmsHistory && fh.rmsHistory.length
+        ? Math.max(...fh.rmsHistory) : rms;
+      const peakPct = Math.min(peakVal / RMS_MAX, 1) * 100;
+      const peakDot = document.getElementById('rms-peak-dot');
+      if (peakDot) peakDot.style.left = peakPct + '%';
+
+      // Threshold line
+      drawRmsMeterThresholdLine(thr);
+
+      // Đổi màu bar theo mức
+      if (bar) {
+        if (rms < thr * 0.7) {
+          bar.style.opacity = '0.5';
+        } else if (rms >= thr) {
+          bar.style.opacity = '1';
+        } else {
+          bar.style.opacity = '0.75';
+        }
+      }
+
+      // Stats
+      const isSpeech = rms >= thr;
+      const cur = document.getElementById('rms-stat-cur');
+      if (cur) {
+        cur.textContent = rms.toFixed(4);
+        cur.className = 'rms-stat-val ' + (isSpeech ? 'green' : (rms > thr * 0.5 ? 'yellow' : ''));
+      }
+      const pk = document.getElementById('rms-stat-peak');
+      if (pk) pk.textContent = peakVal.toFixed(4);
+
+      // Live text
+      const lt = document.getElementById('rms-live-text');
+      if (lt) lt.textContent = `RMS: ${rms.toFixed(4)}`;
+
+      // State indicator
+      const stEl = document.getElementById('rms-stat-state');
+      if (stEl) {
+        stEl.textContent = isSpeech ? '🟢 Nói' : '⚪ Im lặng';
+        stEl.style.color = isSpeech ? 'var(--green)' : 'var(--text-muted)';
+      }
+    }
+
+    function drawRmsMeterThresholdLine(thr) {
+      const pct = Math.min(thr / RMS_MAX, 1) * 100;
+      const line  = document.getElementById('rms-thr-line');
+      const label = document.getElementById('rms-thr-label');
+      if (line)  line.style.left  = pct + '%';
+      if (label) {
+        // Đẩy label sang trái nếu quá sát bên phải
+        label.style.left = (pct > 80 ? pct - 18 : pct + 0.5) + '%';
+        label.textContent = thr.toFixed(3);
+      }
+    }
+
+    /* ─── Waveform cho Free-hand panel ──────────────────────────────────── */
+    function startFhWaveform() {
+      const canvas = document.getElementById('fh-waveform-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      function draw() {
+        if (!fh.analyser) return;
+        fh.waveAnimId = requestAnimationFrame(draw);
+        const W = canvas.width = canvas.offsetWidth;
+        const H = canvas.height = canvas.offsetHeight;
+        const buf = new Uint8Array(fh.analyser.frequencyBinCount);
+        fh.analyser.getByteTimeDomainData(buf);
+        ctx.clearRect(0, 0, W, H);
+        ctx.strokeStyle = 'rgba(0, 212, 255, 0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = 'rgba(0, 212, 255, 0.4)';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        const step = W / buf.length;
+        for (let i = 0; i < buf.length; i++) {
+          const x = i * step;
+          const y = (buf[i] / 128) * H / 2;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      draw();
+    }
+
+    function stopFhWaveform() {
+      if (fh.waveAnimId) { cancelAnimationFrame(fh.waveAnimId); fh.waveAnimId = null; }
+      const canvas = document.getElementById('fh-waveform-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    /* ─── Switch Tab: cập nhật để hỗ trợ tab 'continuous' ───────────────────── */
+    const _origSwitchTab = typeof switchTab === 'function' ? switchTab : null;
+    // Override switchTab để thêm tab 'continuous'
+    // (Hàm gốc được định nghĩa ở trên, ta wrap lại)
+    window._origSwitchTab = window.switchTab;
+    window.switchTab = function(tab) {
+      // Ẩn tất cả panels
+      ['mic', 'file', 'continuous'].forEach(t => {
+        const panel = document.getElementById(`${t}-panel`);
+        if (panel) {
+          if (t === 'continuous') {
+            panel.classList.remove('visible');
+          } else {
+            panel.classList.remove('visible');
+          }
+        }
+        const btn = document.getElementById(`tab-${t}`);
+        if (btn) btn.classList.remove('active');
+      });
+      // Hiện tab mới
+      state.activeTab = tab;
+      const activePanel = document.getElementById(`${tab}-panel`);
+      if (activePanel) activePanel.classList.add('visible');
+      const activeBtn = document.getElementById(`tab-${tab}`);
+      if (activeBtn) activeBtn.classList.add('active');
+    };
   </script>
 </body>
 
